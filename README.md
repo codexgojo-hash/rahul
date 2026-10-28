@@ -93,7 +93,9 @@ Without a key everything above still works — commands are matched locally, off
 
 ## Deploy the UI on Vercel
 
-The front end is static, so Vercel hosts it with zero configuration:
+The front end is static, so Vercel hosts it with zero configuration.
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/codexgojo-hash/rahul)
 
 1. Push this repo to GitHub (already done for `codexgojo-hash/rahul`).
 2. On [vercel.com/new](https://vercel.com/new) → **Import Git Repository** → pick `rahul`.
