@@ -1,0 +1,17 @@
+{
+  "name": "rahul",
+  "version": "1.0.0",
+  "private": true,
+  "description": "RAHUL — a calm local AI that actually drives your Windows PC.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js --open",
+    "autostart:install": "powershell -NoProfile -ExecutionPolicy Bypass -File install/install-autostart.ps1",
+    "autostart:remove": "powershell -NoProfile -ExecutionPolicy Bypass -File install/uninstall-autostart.ps1"
+  },
+  "engines": {
+    "node": ">=18.15"
+  },
+  "license": "MIT"
+}

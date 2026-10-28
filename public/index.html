@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="dark" />
+<title>RAHUL // gojo.os</title>
+<meta name="description" content="RAHUL — a calm AI that drives your Windows PC. Built for Gojo." />
+<meta name="theme-color" content="#04070a" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" href="icon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/style.css" />
+</head>
+<body class="is-booting">
+
+<canvas id="matrix" aria-hidden="true"></canvas>
+<div class="fx grain" aria-hidden="true"></div>
+<div class="fx scan" aria-hidden="true"></div>
+<div class="fx vignette" aria-hidden="true"></div>
+<div class="fx flash" id="flash" aria-hidden="true"></div>
+
+<!-- ───────────────────────── boot sequence ───────────────────────── -->
+<div class="boot" id="boot">
+  <pre class="boot-logo" aria-hidden="true">██████╗  █████╗ ██╗  ██╗██╗   ██╗██╗
+██╔══██╗██╔══██╗██║  ██║██║   ██║██║
+██████╔╝███████║███████║██║   ██║██║
+██╔══██╗██╔══██║██╔══██║██║   ██║██║
+██║  ██║██║  ██║██║  ██║╚██████╔╝███████╗
+╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝</pre>
+  <div class="boot-lines" id="bootLines"></div>
+  <div class="boot-bar"><i id="bootBar"></i></div>
+  <p class="boot-skip">press any key to skip</p>
+</div>
+
+<!-- ───────────────────────── app shell ───────────────────────── -->
+<div class="app" id="app" hidden>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="sigil" aria-hidden="true">◈</span>
+      <div class="brand-text">
+        <h1 class="glitch" data-text="RAHUL">RAHUL</h1>
+        <p class="brand-sub">ai · v1.0 · <b id="modeTag">BOOTING</b></p>
+      </div>
+    </div>
+
+    <div class="top-right">
+      <span class="pill live" id="statusPill"><i></i><span id="linkText">LINK</span></span>
+      <span class="pill ghost mono" id="clock">--:--:--</span>
+      <span class="pill ghost mono hide-sm" id="upTime">--</span>
+      <button class="ico" id="voiceBtn" title="Rahul ki awaaz (TTS)" aria-pressed="false">◍</button>
+      <button class="ico" id="soundBtn" title="UI sounds" aria-pressed="true">♪</button>
+      <button class="ico" id="fsBtn" title="Fullscreen">⛶</button>
+    </div>
+  </header>
+
+  <nav class="rail" aria-label="Sections">
+    <button class="rail-btn is-active" data-view="console" title="Console"><span>▚</span><em>console</em></button>
+    <button class="rail-btn" data-view="system" title="System"><span>◎</span><em>system</em></button>
+    <button class="rail-btn" data-view="files" title="Files"><span>▤</span><em>files</em></button>
+    <button class="rail-btn" data-view="apps" title="Apps"><span>▦</span><em>apps</em></button>
+    <button class="rail-btn" data-view="settings" title="Settings"><span>✳</span><em>settings</em></button>
+    <div class="rail-spacer"></div>
+    <div class="rail-face" title="Rahul"><span>R</span></div>
+  </nav>
+
+  <main class="stage">
+
+    <!-- CONSOLE -->
+    <section class="view is-active" data-view="console">
+      <div class="view-head">
+        <span class="tag">CONSOLE</span>
+        <span class="dim">secure channel · localhost bridge</span>
+        <span class="spacer"></span>
+        <button class="mini" id="clearBtn">clear</button>
+      </div>
+
+      <div class="chat" id="chat" aria-live="polite"></div>
+
+      <div class="watermark" id="watermark" aria-hidden="true">
+        <pre>██████╗  █████╗ ██╗  ██╗██╗   ██╗██╗
+██╔══██╗██╔══██╗██║  ██║██║   ██║██║
+██████╔╝███████║███████║██║   ██║██║
+██╔══██╗██╔══██║██╔══██║██║   ██║██║
+██║  ██║██║  ██║██║  ██║╚██████╔╝███████╗
+╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝</pre>
+        <span>GOJO.OS</span>
+      </div>
+
+      <div class="suggest" id="suggest"></div>
+
+      <form class="composer" id="composer" autocomplete="off">
+        <span class="prompt" id="prompt">gojo@rahul:~$</span>
+        <input id="input" name="cmd" placeholder="kuch bhi bolo — 'help' se shuru karo" spellcheck="false" autocomplete="off" aria-label="Command" />
+        <button type="submit" class="send" aria-label="Send">↵</button>
+      </form>
+      <p class="hintline"><kbd>Ctrl</kbd>+<kbd>K</kbd> palette · <kbd>↑</kbd><kbd>↓</kbd> history · <kbd>Esc</kbd> clear</p>
+    </section>
+
+    <!-- SYSTEM -->
+    <section class="view" data-view="system">
+      <div class="view-head">
+        <span class="tag">SYSTEM</span>
+        <span class="dim">live telemetry, 2s poll</span>
+        <span class="spacer"></span>
+        <button class="mini" id="refreshBtn">refresh</button>
+      </div>
+
+      <div class="cards">
+        <article class="card gauge-card">
+          <h3>CPU</h3>
+          <div class="gauge" id="cpuGauge"><span id="cpuVal">0<small>%</small></span></div>
+          <p class="card-foot" id="cpuModel">—</p>
+        </article>
+        <article class="card gauge-card">
+          <h3>MEMORY</h3>
+          <div class="gauge alt" id="ramGauge"><span id="ramVal">0<small>%</small></span></div>
+          <p class="card-foot" id="ramFoot">—</p>
+        </article>
+        <article class="card gauge-card">
+          <h3>DISK C:</h3>
+          <div class="gauge hot" id="diskGauge"><span id="diskVal">0<small>%</small></span></div>
+          <p class="card-foot" id="diskFoot">—</p>
+        </article>
+        <article class="card">
+          <h3>UPTIME</h3>
+          <p class="big mono" id="bigUptime">—</p>
+          <p class="card-foot" id="hostFoot">—</p>
+          <div class="quick" id="quickActions">
+            <button data-cmd="screenshot lo">screenshot</button>
+            <button data-cmd="lock">lock</button>
+            <button data-cmd="processes">processes</button>
+            <button data-cmd="wifi">network</button>
+          </div>
+        </article>
+      </div>
+
+      <article class="card wide">
+        <h3>LOAD TRACE <span class="dim">60 samples</span></h3>
+        <canvas id="spark" width="1200" height="160"></canvas>
+      </article>
+
+      <article class="card wide">
+        <h3>HEAVIEST PROCESSES</h3>
+        <div id="procTable" class="proc-table"><p class="dim">waiting for bridge…</p></div>
+      </article>
+    </section>
+
+    <!-- FILES -->
+    <section class="view" data-view="files">
+      <div class="view-head">
+        <span class="tag">FILES</span>
+        <span class="dim">read-only index · safe folders</span>
+      </div>
+      <div class="cards three">
+        <article class="card dir-card" data-cmd="list downloads"><h3>DOWNLOADS</h3><p class="dim">recent items</p><span class="go">open →</span></article>
+        <article class="card dir-card" data-cmd="list desktop"><h3>DESKTOP</h3><p class="dim">recent items</p><span class="go">open →</span></article>
+        <article class="card dir-card" data-cmd="list documents"><h3>DOCUMENTS</h3><p class="dim">recent items</p><span class="go">open →</span></article>
+      </div>
+      <article class="card wide">
+        <h3>SEARCH</h3>
+        <form class="inline-form" id="searchForm">
+          <input id="searchInput" placeholder="file ka naam likho…" aria-label="Search files" />
+          <button type="submit">search</button>
+        </form>
+        <div id="fileResults" class="file-results"></div>
+      </article>
+    </section>
+
+    <!-- APPS -->
+    <section class="view" data-view="apps">
+      <div class="view-head">
+        <span class="tag">APPS</span>
+        <span class="dim">click to launch on the real machine</span>
+      </div>
+      <div class="app-grid" id="appGrid"></div>
+      <article class="card wide">
+        <h3>+ CUSTOM TARGET</h3>
+        <form class="inline-form" id="urlForm">
+          <input id="urlInput" placeholder="https://example.com" aria-label="Open URL" />
+          <button type="submit">open url</button>
+        </form>
+      </article>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="view" data-view="settings">
+      <div class="view-head">
+        <span class="tag">SETTINGS</span>
+        <span class="dim">bridge · voice · autostart</span>
+      </div>
+
+      <div class="cards two">
+        <article class="card">
+          <h3>BRIDGE</h3>
+          <p class="kv"><span>mode</span><b id="setMode">—</b></p>
+          <p class="kv"><span>api</span><b id="setApi">same origin</b></p>
+          <p class="kv"><span>token</span><b id="setToken">—</b></p>
+          <p class="kv"><span>host</span><b id="setHost">—</b></p>
+          <div class="row">
+            <input id="bridgeInput" placeholder="https://<tunnel>.trycloudflare.com" />
+            <input id="tokenInput" placeholder="token" />
+            <button id="bridgeApply">connect</button>
+          </div>
+          <p class="tiny dim">Vercel par UI cloud mode me chalta hai. PC control ke liye local bridge kholo, ya tunnel URL + token yahan paste karo.</p>
+        </article>
+
+        <article class="card">
+          <h3>BEHAVIOUR</h3>
+          <label class="switch"><span>Rahul speaks replies</span><input type="checkbox" id="voiceToggle" /></label>
+          <label class="switch"><span>Interface sounds</span><input type="checkbox" id="soundToggle" checked /></label>
+          <label class="switch"><span>Matrix rain</span><input type="checkbox" id="matrixToggle" checked /></label>
+          <p class="kv"><span>owner</span><b>Gojo</b></p>
+          <p class="kv"><span>persona</span><b>calm / hinglish</b></p>
+          <div class="row">
+            <button id="resetChat">reset console</button>
+            <button id="connectPc">connect pc</button>
+          </div>
+        </article>
+      </div>
+
+      <article class="card wide">
+        <h3>START WITH WINDOWS</h3>
+        <p class="tiny">Terminal me ek baar chalao — login par Rahul khud khul jayega:</p>
+        <pre class="code">cd rahul
+npm run autostart:install</pre>
+        <p class="tiny dim">Hatane ke liye: <code>npm run autostart:remove</code></p>
+      </article>
+    </section>
+  </main>
+
+  <!-- HUD -->
+  <aside class="hud" aria-label="Telemetry">
+    <div class="hud-head"><span>TELEMETRY</span><i class="dot"></i></div>
+
+    <div class="hud-block">
+      <div class="hud-row"><span>CPU</span><b id="hCpu">0%</b></div>
+      <div class="bar"><i id="hCpuBar"></i></div>
+      <div class="hud-row"><span>RAM</span><b id="hRam">0%</b></div>
+      <div class="bar"><i id="hRamBar" class="alt"></i></div>
+      <div class="hud-row"><span>DISK</span><b id="hDisk">0%</b></div>
+      <div class="bar"><i id="hDiskBar" class="hot"></i></div>
+    </div>
+
+    <div class="hud-block">
+      <div class="hud-title">HOST</div>
+      <p class="kv"><span>name</span><b id="hHost">—</b></p>
+      <p class="kv"><span>user</span><b id="hUser">—</b></p>
+      <p class="kv"><span>ip</span><b id="hIp">—</b></p>
+      <p class="kv"><span>uptime</span><b id="hUp">—</b></p>
+    </div>
+
+    <div class="hud-block grow">
+      <div class="hud-title">TOP MEMORY</div>
+      <ul class="proc-list" id="hProcs"></ul>
+    </div>
+
+    <div class="hud-block">
+      <div class="hud-title">FEED</div>
+      <ul class="feed" id="feed"></ul>
+    </div>
+  </aside>
+</div>
+
+<!-- command palette -->
+<div class="palette" id="palette" hidden>
+  <div class="palette-box">
+    <input id="paletteInput" placeholder="command dhundo…" />
+    <ul id="paletteList"></ul>
+  </div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<script src="assets/app.js" defer></script>
+</body>
+</html>
