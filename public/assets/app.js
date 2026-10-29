@@ -1104,7 +1104,7 @@
       brain.textContent = !l
         ? S.mode === 'cloud' ? 'demo mode' : 'commands only'
         : l.ready
-          ? `${l.model} · ${l.local ? 'local · free' : 'api'}`
+          ? `${l.active || l.model} · ${l.local ? 'local · free' : 'api'}`
           : l.local && l.available === false
             ? `${l.model} · not downloaded yet`
             : 'not configured';

@@ -1,0 +1,13 @@
+# Vercel should deploy the UI only, never the local bridge.
+server.js
+package.json
+package-lock.json
+rahul.config.json
+rahul.token
+rahul.port
+lib
+install
+shots
+notes
+docs
+_tools

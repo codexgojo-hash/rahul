@@ -160,28 +160,32 @@ function serveStatic(req, res, urlPath) {
 
 /* ------------------------------------------------------------- endpoints */
 
-/** Is the configured model actually pulled? (Ollama only; cached 15 s) */
+/** Which model will actually answer? (Ollama only; cached 15 s) */
 let llmCache = { at: 0, value: null };
 async function llmStatus() {
   if (Date.now() - llmCache.at < 15000 && llmCache.value) return llmCache.value;
   const s = brain.llmSettings();
   let available = true;
   let pulled = [];
+  let active = s.model;
   if (s.isLocal) {
     available = false;
     try {
       const tagsUrl = s.base.replace(/\/v1\/?$/, '') + '/api/tags';
       const r = await fetch(tagsUrl, { signal: AbortSignal.timeout(1500) });
       const j = await r.json();
-      pulled = (j.models || []).map((m) => m.name);
+      pulled = (j.models || []).map((m) => m.name).filter(Boolean);
       available = pulled.some((n) => n === s.model || n === `${s.model}:latest` || n.split(':')[0] === s.model.split(':')[0]);
+      active = (await brain.resolveModel(s.base, s.model)) || null;
     } catch {
       available = false;
+      active = null;
     }
   }
   const value = {
-    ready: s.ready && available,
+    ready: s.ready && !!active,
     model: s.model,
+    active,
     base: s.base,
     local: s.isLocal,
     available,
