@@ -54,7 +54,13 @@
     palette: $('#palette'),
     paletteInput: $('#paletteInput'),
     paletteList: $('#paletteList'),
-    spark: $('#spark')
+    spark: $('#spark'),
+    micBtn: $('#micBtn'),
+    vdock: $('#vdock'),
+    vState: $('#vState'),
+    vHint: $('#vHint'),
+    vBars: $('#vBars'),
+    vStop: $('#vStop')
   };
 
   /* ------------------------------------------------------------ audio */
@@ -85,22 +91,268 @@
     } catch {}
   }
 
+  /* =========================================================== voice ===
+     out  : speechSynthesis (Chrome/Edge voices, hi-IN / en-IN preferred)
+     in   : Web Speech API, continuous + interim, auto-restart while live
+     ==================================================================== */
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  const V = {
+    active: false,
+    speaking: false,
+    rec: null,
+    restartT: 0,
+    stream: null,
+    analyser: null,
+    buf: null,
+    raf: 0,
+    bars: [],
+    log: [],
+    lang: store.get('rahul_lang', 'en-IN'),
+    supported: !!SR
+  };
+
+  function initBars() {
+    if (!el.vBars || V.bars.length) return;
+    const n = window.innerWidth < 620 ? 18 : 30;
+    for (let i = 0; i < n; i++) {
+      const b = document.createElement('i');
+      el.vBars.append(b);
+      V.bars.push(b);
+    }
+  }
+
+  function setVState(state, hint) {
+    if (!el.vdock) return;
+    el.vdock.dataset.state = state;
+    const label = {
+      listening: 'LISTENING',
+      thinking: 'THINKING',
+      speaking: 'SPEAKING',
+      error: 'MIC ERROR',
+      starting: 'WAKING'
+    }[state] || 'VOICE';
+    el.vState.textContent = label;
+    if (hint) el.vHint.textContent = hint;
+  }
+
+  function speakAsync(text) {
+    return new Promise((resolve) => {
+      if (!S.voice || !('speechSynthesis' in window)) return resolve();
+      const clean = String(text || '').replace(/[`*_#>|]/g, '').slice(0, 420);
+      if (!clean) return resolve();
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        V.speaking = false;
+        if (V.active) setVState('listening', 'bolo, Gojo — sun raha hoon');
+        resolve();
+      };
+      try {
+        speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(clean);
+        const voices = speechSynthesis.getVoices();
+        const want = V.lang.toLowerCase().replace('_', '-');
+        const pick =
+          voices.find((v) => v.lang && v.lang.toLowerCase().replace('_', '-') === want) ||
+          voices.find((v) => /hi-IN/i.test(v.lang)) ||
+          voices.find((v) => /en-IN/i.test(v.lang)) ||
+          voices[0];
+        if (pick) u.voice = pick;
+        u.lang = V.lang;
+        u.rate = 0.98;
+        u.pitch = 0.95;
+        u.volume = 0.92;
+        u.onend = finish;
+        u.onerror = finish;
+        V.speaking = true;
+        if (V.active) setVState('speaking', clean.slice(0, 80));
+        speechSynthesis.speak(u);
+        setTimeout(finish, Math.min(22000, 1400 + clean.length * 95));
+      } catch {
+        finish();
+      }
+    });
+  }
+
   function speak(text) {
-    if (!S.voice || !('speechSynthesis' in window)) return;
-    const clean = String(text || '').replace(/[`*_#>|]/g, '').slice(0, 320);
-    if (!clean) return;
+    speakAsync(text).catch(() => {});
+  }
+
+  function stopRec() {
+    try {
+      if (V.rec) V.rec.abort();
+    } catch {}
+  }
+
+  function startRec() {
+    if (!V.active || !V.supported) return;
+    clearTimeout(V.restartT);
+    try {
+      if (!V.rec) {
+        const r = new SR();
+        r.continuous = true;
+        r.interimResults = true;
+        r.maxAlternatives = 1;
+        r.onstart = () => {
+          logV('start');
+          setVState('listening', 'bolo, Gojo — sun raha hoon');
+        };
+        r.onresult = onRec;
+        r.onerror = onRecErr;
+        r.onend = () => {
+          logV('end');
+          onRecEnd();
+        };
+        V.rec = r;
+      }
+      V.rec.lang = V.lang;
+      V.rec.start();
+    } catch (e) {
+      logV('start-fail ' + e.message);
+    }
+  }
+
+  function logV(what) {
+    V.log.push(`${new Date().toLocaleTimeString('en-GB')} ${what}`);
+    if (V.log.length > 24) V.log.shift();
+  }
+
+  function onRecEnd() {
+    if (!V.active || V.speaking || S.busy) return;
+    clearTimeout(V.restartT);
+    V.restartT = setTimeout(() => {
+      if (V.active && !V.speaking && !S.busy) startRec();
+    }, 420);
+  }
+
+  function onRecErr(e) {
+    const code = (e && e.error) || 'error';
+    logV('error ' + code);
+    if (code === 'no-speech' || code === 'aborted') return;
+    if (code === 'not-allowed' || code === 'service-not-allowed') {
+      setVState('error', 'mic permission band hai — Chrome me allow karo');
+      toast('ERR', 'mic permission denied');
+      stopVoice();
+      return;
+    }
+    if (code === 'network') {
+      setVState('error', 'speech service reachable nahi hai');
+      return;
+    }
+    setVState('error', code);
+  }
+
+  function onRec(e) {
+    let interim = '';
+    let final = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const r = e.results[i];
+      if (r.isFinal) final += r[0].transcript;
+      else interim += r[0].transcript;
+    }
+    logV(`result ${final ? 'final' : 'interim'} "${(final || interim).trim().slice(0, 40)}"`);
+    if (interim.trim()) {
+      el.vHint.textContent = interim.trim();
+      el.input.value = interim.trim();
+    }
+    if (final.trim()) {
+      const text = final.trim();
+      el.input.value = '';
+      el.vHint.textContent = text;
+      handleUtterance(text);
+    }
+  }
+
+  async function handleUtterance(text) {
+    if (S.busy) return;
+    setVState('thinking', text);
+    stopRec();
+    await run(text, { voice: true });
+  }
+
+  async function startMeter() {
+    initBars();
+    el.vdock.classList.remove('vdocksilent');
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      el.vdock.classList.add('vdocksilent');
+      return;
+    }
+    try {
+      V.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+      if (actx.state === 'suspended') await actx.resume();
+      const src = actx.createMediaStreamSource(V.stream);
+      const an = actx.createAnalyser();
+      an.fftSize = 64;
+      an.smoothingTimeConstant = 0.75;
+      src.connect(an);
+      V.analyser = an;
+      V.buf = new Uint8Array(an.frequencyBinCount);
+      meter();
+    } catch {
+      el.vdock.classList.add('vdocksilent');
+    }
+  }
+
+  function meter() {
+    if (!V.active) return;
+    V.raf = requestAnimationFrame(meter);
+    if (!V.analyser || !V.bars.length) return;
+    V.analyser.getByteFrequencyData(V.buf);
+    for (let i = 0; i < V.bars.length; i++) {
+      const v = V.buf[Math.floor((i / V.bars.length) * V.buf.length)] / 255;
+      V.bars[i].style.transform = `scaleY(${Math.max(0.1, v)})`;
+    }
+  }
+
+  function stopMeter() {
+    cancelAnimationFrame(V.raf);
+    V.raf = 0;
+    try {
+      if (V.stream) V.stream.getTracks().forEach((t) => t.stop());
+    } catch {}
+    V.stream = null;
+    V.analyser = null;
+    V.bars.forEach((b) => (b.style.transform = 'scaleY(0.12)'));
+  }
+
+  async function startVoice() {
+    if (V.active) return;
+    if (!V.supported) {
+      toast('ERR', 'is browser me voice input nahi hai (Chrome/Edge)');
+      return;
+    }
+    V.active = true;
+    if (!S.voice) {
+      S.voice = true;
+      store.set('rahul_voice', true);
+      $('#voiceToggle').checked = true;
+      $('#voiceBtn').setAttribute('aria-pressed', 'true');
+    }
+    el.vdock.hidden = false;
+    el.micBtn.setAttribute('aria-pressed', 'true');
+    setVState('starting', 'mic permission…');
+    sfx('recv');
+    initBars();
+    startMeter();
+    startRec();
+  }
+
+  function stopVoice() {
+    if (!V.active) return;
+    V.active = false;
+    clearTimeout(V.restartT);
+    stopRec();
+    stopMeter();
     try {
       speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(clean);
-      const voices = speechSynthesis.getVoices();
-      const hi = voices.find((v) => /hi-IN|hi_IN/i.test(v.lang));
-      const en = voices.find((v) => /en-IN/i.test(v.lang));
-      if (hi) u.voice = hi; else if (en) u.voice = en;
-      u.rate = 0.98;
-      u.pitch = 0.95;
-      u.volume = 0.9;
-      speechSynthesis.speak(u);
     } catch {}
+    V.speaking = false;
+    el.vdock.hidden = true;
+    el.micBtn.setAttribute('aria-pressed', 'false');
+    sfx('tap');
   }
 
   /* ----------------------------------------------------------- matrix */
@@ -497,8 +749,8 @@
         payload = cloudReply(text);
         await sleep(320);
       } else {
-        const r = await api('/api/command', { method: 'POST', body: { text } });
-        payload = { reply: r.reply, card: r.card, tone: r.tone, chip: r.chip };
+        const r = await api('/api/command', { method: 'POST', body: { text, voice: !!opts.voice } });
+        payload = { reply: r.reply, card: r.card, tone: r.tone, chip: r.chip, confirm: r.confirm };
       }
     } catch (e) {
       payload = {
@@ -518,14 +770,25 @@
     const msg = await addMsg('bot', payload.reply || '…', {
       card: payload.card,
       tone: payload.tone,
-      instant: S.mode === 'cloud'
+      instant: opts.voice || S.mode === 'cloud'
     });
     if (payload.card) msg.classList.add('has-card');
     sfx('recv');
-    speak(payload.reply);
     if (payload.chip) toast('LAUNCHED', payload.chip);
+    if (payload.confirm) toast('CONFIRM', 'bolo "confirm" ya "cancel"');
+
+    if (V.active) {
+      await speakAsync(payload.reply);
+      if (V.active) {
+        setVState('listening', 'bolo, Gojo — sun raha hoon');
+        startRec();
+      }
+    } else {
+      speak(payload.reply);
+    }
+
     if (opts.refreshTele) refresh();
-    el.input.focus();
+    if (!V.active) el.input.focus();
   }
 
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -925,6 +1188,16 @@
 
     $$('.rail-btn').forEach((b) => b.addEventListener('click', () => setView(b.dataset.view)));
 
+    el.micBtn.addEventListener('click', () => (V.active ? stopVoice() : startVoice()));
+    el.vStop.addEventListener('click', stopVoice);
+
+    $('#langSel').addEventListener('change', (e) => {
+      V.lang = e.target.value;
+      store.set('rahul_lang', V.lang);
+      if (V.active) { stopRec(); setTimeout(startRec, 250); }
+      toast('VOICE', V.lang);
+    });
+
     $$('[data-cmd]').forEach((b) =>
       b.addEventListener('click', () => {
         const c = b.dataset.cmd;
@@ -1035,7 +1308,14 @@
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         el.palette.hidden ? openPalette() : closePalette();
+        return;
       }
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'v') {
+        e.preventDefault();
+        V.active ? stopVoice() : startVoice();
+        return;
+      }
+      if (e.key === 'Escape' && V.active) stopVoice();
     });
 
     addEventListener('resize', drawSpark);
@@ -1083,6 +1363,13 @@
     $('#voiceBtn').setAttribute('aria-pressed', String(S.voice));
     $('#soundBtn').setAttribute('aria-pressed', String(S.sound));
 
+    const micState = $('#micState');
+    if (micState) micState.textContent = V.supported ? 'ready · webkitSpeechRecognition' : 'not supported (use Chrome/Edge)';
+    const langSel = $('#langSel');
+    if (langSel) langSel.value = V.lang;
+    if (!V.supported) el.micBtn.disabled = true;
+    initBars();
+
     if (S.mode === 'local' || S.mode === 'remote') {
       connectStream();
       refresh();
@@ -1095,6 +1382,10 @@
 
     runBoot();
     setTimeout(() => { if (!booted) finishBoot(); }, 5200);
+
+    if (new URLSearchParams(location.search).has('debug')) {
+      window.__rahul = { S, V, startVoice, stopVoice, run, speakAsync, setVState };
+    }
   }
 
   document.addEventListener('DOMContentLoaded', init);

@@ -269,6 +269,7 @@ const server = http.createServer(async (req, res) => {
       const text = String(body.text || '').slice(0, 500);
       try {
         const result = await brain.handle(text, {
+          voice: !!body.voice,
           onAction: (label) => broadcast({ type: 'action', label, at: Date.now() })
         });
         broadcast({ type: 'turn', user: text, reply: result.reply, at: Date.now() });

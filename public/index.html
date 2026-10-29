@@ -95,12 +95,22 @@
 
       <div class="suggest" id="suggest"></div>
 
+      <div class="vdock" id="vdock" hidden>
+        <div class="vorb" id="vorb"><i></i><i></i><span>◉</span></div>
+        <div class="vbody">
+          <div class="vhead"><b id="vState">LISTENING</b><em id="vHint">bolo, Gojo — main sun raha hoon</em></div>
+          <div class="vbars" id="vBars" aria-hidden="true"></div>
+        </div>
+        <button type="button" class="mini" id="vStop">stop</button>
+      </div>
+
       <form class="composer" id="composer" autocomplete="off">
         <span class="prompt" id="prompt">gojo@rahul:~$</span>
         <input id="input" name="cmd" placeholder="kuch bhi bolo — 'help' se shuru karo" spellcheck="false" autocomplete="off" aria-label="Command" />
+        <button type="button" class="mic" id="micBtn" aria-pressed="false" title="Live voice — Ctrl+Shift+V">◉</button>
         <button type="submit" class="send" aria-label="Send">↵</button>
       </form>
-      <p class="hintline"><kbd>Ctrl</kbd>+<kbd>K</kbd> palette · <kbd>↑</kbd><kbd>↓</kbd> history · <kbd>Esc</kbd> clear</p>
+      <p class="hintline"><kbd>Ctrl</kbd>+<kbd>K</kbd> palette · <kbd>Ctrl</kbd>+<kbd>⇧</kbd>+<kbd>V</kbd> voice · <kbd>↑</kbd><kbd>↓</kbd> history · <kbd>Esc</kbd> stop</p>
     </section>
 
     <!-- SYSTEM -->
@@ -216,6 +226,14 @@
           <label class="switch"><span>Rahul speaks replies</span><input type="checkbox" id="voiceToggle" /></label>
           <label class="switch"><span>Interface sounds</span><input type="checkbox" id="soundToggle" checked /></label>
           <label class="switch"><span>Matrix rain</span><input type="checkbox" id="matrixToggle" checked /></label>
+          <p class="kv"><span>voice lang</span>
+            <select id="langSel" class="sel">
+              <option value="en-IN">en-IN · hinglish</option>
+              <option value="hi-IN">hi-IN · hindi</option>
+              <option value="en-US">en-US · english</option>
+            </select>
+          </p>
+          <p class="kv"><span>speech in</span><b id="micState">checking…</b></p>
           <p class="kv"><span>owner</span><b>Gojo</b></p>
           <p class="kv"><span>persona</span><b>calm / hinglish</b></p>
           <div class="row">
