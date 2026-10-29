@@ -60,15 +60,34 @@ npm run autostart:remove      # undo
 | `wifi` / `ip` | SSID, signal, adapter, IPv4 |
 | `open youtube.com` | any URL in the default browser |
 
-Add an LLM key and Rahul also holds a normal conversation:
+Rahul can also hold a normal conversation. Two ways, both wired:
+
+**1. Local brain — free, unlimited, offline (default).** Uses [Ollama](https://ollama.com) on your own machine:
 
 ```bash
-setx RAHUL_API_KEY "sk-…"            # OpenAI-compatible
-setx RAHUL_BASE_URL "https://api.deepseek.com/v1"   # optional
-setx RAHUL_MODEL "deepseek-chat"                   # optional
+ollama pull qwen2.5:3b
+npm start
 ```
 
-Without a key everything above still works — commands are matched locally, offline.
+`rahul.config.json` already points at it:
+
+```json
+"llm": { "base": "http://127.0.0.1:11434/v1", "model": "qwen2.5:3b", "key": "" }
+```
+
+No API key, no token limits, nothing leaves the PC. Slower than the cloud, and quality
+scales with the model you pull (`qwen2.5:1.5b` for weak machines, `qwen2.5:7b` if you
+have the RAM).
+
+**2. Cloud API — faster, needs a key** (env wins over config):
+
+```bash
+setx RAHUL_API_KEY "sk-…"                              # OpenAI-compatible
+setx RAHUL_BASE_URL "https://api.deepseek.com/v1"      # optional
+setx RAHUL_MODEL "deepseek-chat"                       # optional
+```
+
+With neither, everything above still works — commands are matched locally, offline.
 
 ---
 

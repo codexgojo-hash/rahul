@@ -160,6 +160,37 @@ function serveStatic(req, res, urlPath) {
 
 /* ------------------------------------------------------------- endpoints */
 
+/** Is the configured model actually pulled? (Ollama only; cached 15 s) */
+let llmCache = { at: 0, value: null };
+async function llmStatus() {
+  if (Date.now() - llmCache.at < 15000 && llmCache.value) return llmCache.value;
+  const s = brain.llmSettings();
+  let available = true;
+  let pulled = [];
+  if (s.isLocal) {
+    available = false;
+    try {
+      const tagsUrl = s.base.replace(/\/v1\/?$/, '') + '/api/tags';
+      const r = await fetch(tagsUrl, { signal: AbortSignal.timeout(1500) });
+      const j = await r.json();
+      pulled = (j.models || []).map((m) => m.name);
+      available = pulled.some((n) => n === s.model || n === `${s.model}:latest` || n.split(':')[0] === s.model.split(':')[0]);
+    } catch {
+      available = false;
+    }
+  }
+  const value = {
+    ready: s.ready && available,
+    model: s.model,
+    base: s.base,
+    local: s.isLocal,
+    available,
+    pulled
+  };
+  llmCache = { at: Date.now(), value };
+  return value;
+}
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || '127.0.0.1'}`);
   const p = url.pathname;
@@ -194,7 +225,8 @@ const server = http.createServer(async (req, res) => {
         'notes',
         'network'
       ],
-      uptimeSec: Math.floor((Date.now() - startedAt) / 1000)
+      uptimeSec: Math.floor((Date.now() - startedAt) / 1000),
+      llm: await llmStatus()
     });
   }
 

@@ -1098,6 +1098,17 @@
     $('#setApi').textContent = S.api || 'same origin (127.0.0.1)';
     $('#setToken').textContent = S.token ? `${S.token.slice(0, 6)}…${S.token.slice(-4)}` : 'not set';
     $('#setHost').textContent = S.tele ? S.tele.host : navigator.platform;
+    const brain = $('#brainState');
+    if (brain) {
+      const l = S.llm;
+      brain.textContent = !l
+        ? S.mode === 'cloud' ? 'demo mode' : 'commands only'
+        : l.ready
+          ? `${l.model} · ${l.local ? 'local · free' : 'api'}`
+          : l.local && l.available === false
+            ? `${l.model} · not downloaded yet`
+            : 'not configured';
+    }
     $('#prompt').textContent = `${(S.owner || 'gojo').toLowerCase()}@rahul:~$`;
     setOnline(S.mode === 'local' || S.mode === 'remote');
   }
@@ -1158,6 +1169,7 @@
         const r = await api('/api/hello');
         S.name = r.name || S.name;
         S.owner = r.owner || S.owner;
+        S.llm = r.llm || null;
         S.online = true;
       } catch (e) {
         if (e.message === 'unauthorized') S.mode = 'locked';
